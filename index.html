@@ -38,6 +38,23 @@ function resume(){if(!running||!paused)return;paused=false;startedAt=Date.now();
 function pause(){if(!running)return;if(paused){resume();return}clock();paused=true;clearPhase();hideBall();el('pause').textContent='Weiter';el('notice').textContent='Pausiert'}
 function reset(){el('actualGap').textContent='–';clearPhase();running=false;paused=false;elapsed=0;shown=0;hits=0;hideBall();status();el('pause').textContent='Pause';el('notice').textContent='Zurückgesetzt – Start drücken'}
 function sync(){['dur','gap','size','dist','contrast'].forEach(function(id){el(id+'v').textContent=el(id).value+((id==='dur'||id==='gap')?' ms':id==='size'?' px':' %')});el('ackButton').style.display=el('ack').value==='on'?'block':'none';document.body.style.background=({dark:'#101419',mid:'#777777',light:'#e2e2e2'})[el('bg').value];el('cross').style.setProperty('--cross-color',el('bg').value==='light'?'#000000':'#ffdc48')}
-el('start').addEventListener('click',begin);el('pause').addEventListener('click',pause);el('reset').addEventListener('click',reset);el('ackButton').addEventListener('click',function(){if(running&&!paused&&visible&&!acknowledged){hits++;acknowledged=true;status()}});['mode','dur','gap','size','dist','contrast','ack','bg'].forEach(function(id){el(id).addEventListener('input',sync);el(id).addEventListener('change',sync)});el('toggle').addEventListener('click',function(){var hidden=el('panel').classList.toggle('hidden');el('toggle').textContent=hidden?'Einstellungen anzeigen':'Einstellungen ausblenden'});clockTimer=setInterval(clock,100);sync();status();el('debug').textContent='Steuerung bereit ✓';setTimeout(function(){el('debug').style.display='none'},1800);
+// Leiser, kurzer Quittierungsklick. Audio wird erst durch direkten Tastendruck gestartet (iPad/Safari).
+var audioContext=null;
+function playAckClick(){
+ try{
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  if(!audioContext)audioContext=new AC();
+  if(audioContext.state==='suspended')audioContext.resume();
+  var t=audioContext.currentTime,osc=audioContext.createOscillator(),gain=audioContext.createGain();
+  osc.type='sine';osc.frequency.setValueAtTime(1050,t);
+  gain.gain.setValueAtTime(0.0001,t);
+  gain.gain.exponentialRampToValueAtTime(0.035,t+0.004);
+  gain.gain.exponentialRampToValueAtTime(0.0001,t+0.055);
+  osc.connect(gain);gain.connect(audioContext.destination);
+  osc.start(t);osc.stop(t+0.06);
+ }catch(e){} // Audio-Fehler dürfen das Training nicht unterbrechen.
+}
+el('start').addEventListener('click',begin);el('pause').addEventListener('click',pause);el('reset').addEventListener('click',reset);el('ackButton').addEventListener('click',function(){if(running&&!paused&&visible&&!acknowledged){hits++;acknowledged=true;status();playAckClick()}});['mode','dur','gap','size','dist','contrast','ack','bg'].forEach(function(id){el(id).addEventListener('input',sync);el(id).addEventListener('change',sync)});el('toggle').addEventListener('click',function(){var hidden=el('panel').classList.toggle('hidden');el('toggle').textContent=hidden?'Einstellungen anzeigen':'Einstellungen ausblenden'});clockTimer=setInterval(clock,100);sync();status();el('debug').textContent='Steuerung bereit ✓';setTimeout(function(){el('debug').style.display='none'},1800);
 })();
 </script></body></html>
